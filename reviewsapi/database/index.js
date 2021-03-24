@@ -11,80 +11,59 @@ const getReviews = (product_id, page, count, orderBy, cb) => {
   const offset = (page - 1) * count;
 
   if (!orderBy) {
-    pool
-      .query("SELECT * FROM reviews WHERE product_id = $1 OFFSET $2 LIMIT $3", [
-        product_id,
-        offset,
-        count,
-      ])
-      .then((results) => {
-        updatedResults = results.rows;
-        const photoPromises = [];
-        for (let i = 0; i < results.rows.length; i++) {
-          photoPromises.push(
-            pool.query(
-              "SELECT id, url FROM reviews_photos WHERE review_id = $1",
-              [results.rows[i].id]
-            )
-          );
+    pool.query(
+      "SELECT reviews.id as review_id, reviews.rating, reviews.summary, reviews.recommend, reviews.body, reviews.date, reviews.reviewer_name, reviews.helpfulness, json_agg(json_build_object('id', reviews_photos.id, 'url',reviews_photos.url)) as photos from reviews left join reviews_photos on reviews.id = reviews_photos.review_id where product_id = $1 group by reviews.id OFFSET $2 LIMIT $3",
+      [product_id, offset, count],
+      (err, results) => {
+        if (err) {
+          cb(err, null);
+        } else {
+          console.log("results: ", results.rows);
+          updatedResults = results.rows;
+          for (let i = 0; i < results.rows.length; i++) {
+            if (!results.rows[i].photos[0].id) {
+              updatedResults[i].photos = [];
+            }
+          }
+          console.log("updatedResults: ", updatedResults);
+          let finalResult = {
+            product: product_id,
+            page: page - 1,
+            count: count,
+            results: updatedResults,
+          };
+          cb(null, finalResult);
         }
-        return Promise.all(photoPromises);
-      })
-      .then((result) => {
-        for (let i = 0; i < updatedResults.length; i++) {
-          updatedResults[i].photos = result[i].rows;
-        }
-        let finalResult = {
-          product: product_id,
-          page: page - 1,
-          count: count,
-          results: updatedResults,
-        };
-        cb(null, finalResult);
-      })
-      .catch((error) => {
-        cb(error, null);
-      });
+      }
+    );
   } else {
-    pool
-      .query(
-        "SELECT * FROM reviews WHERE product_id = $1 ORDER BY $2 DESC OFFSET $3 LIMIT $4",
-        [product_id, orderBy, offset, count]
-      )
-      .then((results) => {
-        updatedResults = results.rows;
-        console.log(updatedResults);
-        const photoPromises = [];
-        for (let i = 0; i < results.rows.length; i++) {
-          photoPromises.push(
-            pool.query(
-              "SELECT id, url FROM reviews_photos WHERE review_id = $1",
-              [results.rows[i].id]
-            )
-          );
+    pool.query(
+      "SELECT reviews.id as review_id, reviews.rating, reviews.summary, reviews.recommend, reviews.body, reviews.date, reviews.reviewer_name, reviews.helpfulness, json_agg(json_build_object('id', reviews_photos.id, 'url',reviews_photos.url)) as photos from reviews left join reviews_photos on reviews.id = reviews_photos.review_id where product_id = $1 group by reviews.id ORDER BY $2 OFFSET $3 LIMIT $4",
+      [product_id, orderBy, offset, count],
+      (err, results) => {
+        if (err) {
+          cb(err, null);
+        } else {
+          updatedResults = results.rows;
+          for (let i = 0; i < results.rows.length; i++) {
+            if (!results.rows[i].photos[0].id) {
+              updatedResults[i].photos = [];
+            }
+          }
+          let finalResult = {
+            product: product_id,
+            page: page - 1,
+            count: count,
+            results: updatedResults,
+          };
+          cb(null, finalResult);
         }
-        return Promise.all(photoPromises);
-      })
-      .then((result) => {
-        for (let i = 0; i < updatedResults.length; i++) {
-          updatedResults[i].photos = result[i].rows;
-        }
-        let finalResult = {
-          product: product_id,
-          page: page - 1,
-          count: count,
-          results: updatedResults,
-        };
-        cb(null, finalResult);
-      })
-      .catch((error) => {
-        cb(error, null);
-      });
+      }
+    );
   }
 };
 
 const getMeta = (product_id, cb) => {
-  console.log("getMeta invoked productID: ", product_id);
   let finalMeta = {
     product_id: product_id,
   };
@@ -104,8 +83,6 @@ const getMeta = (product_id, cb) => {
 
   return Promise.all(metaPromise)
     .then((metaData) => {
-      console.log("ratings/recommended: ", metaData[0].rows);
-      console.log("characteristics: ", metaData[1].rows);
       let ratings = {};
       let recommended = {};
       let characteristics = {};
@@ -137,7 +114,6 @@ const getMeta = (product_id, cb) => {
       finalMeta.ratings = ratings;
       finalMeta.recommended = recommended;
       finalMeta.characteristics = characteristics;
-      console.log("finalMeta: ", finalMeta);
       cb(null, finalMeta);
     })
     .catch((err) => {
