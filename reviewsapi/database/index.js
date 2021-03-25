@@ -12,7 +12,7 @@ const getReviews = (product_id, page, count, orderBy, cb) => {
 
   if (!orderBy) {
     pool.query(
-      "SELECT reviews.id as review_id, reviews.rating, reviews.summary, reviews.recommend, reviews.body, reviews.date, reviews.reviewer_name, reviews.helpfulness, json_agg(json_build_object('id', reviews_photos.id, 'url',reviews_photos.url)) as photos from reviews left join reviews_photos on reviews.id = reviews_photos.review_id where product_id = $1 group by reviews.id OFFSET $2 LIMIT $3",
+      "SELECT reviews.id as review_id, reviews.rating, reviews.summary, reviews.recommend, reviews.responce, reviews.body, reviews.date, reviews.reviewer_name, reviews.helpfulness, json_agg(json_build_object('id', reviews_photos.id, 'url',reviews_photos.url)) as photos from reviews left join reviews_photos on reviews.id = reviews_photos.review_id where product_id = $1 group by reviews.id OFFSET $2 LIMIT $3",
       [product_id, offset, count],
       (err, results) => {
         if (err) {
@@ -38,7 +38,7 @@ const getReviews = (product_id, page, count, orderBy, cb) => {
     );
   } else {
     pool.query(
-      "SELECT reviews.id as review_id, reviews.rating, reviews.summary, reviews.recommend, reviews.body, reviews.date, reviews.reviewer_name, reviews.helpfulness, json_agg(json_build_object('id', reviews_photos.id, 'url',reviews_photos.url)) as photos from reviews left join reviews_photos on reviews.id = reviews_photos.review_id where product_id = $1 group by reviews.id ORDER BY $2 OFFSET $3 LIMIT $4",
+      "SELECT reviews.id as review_id, reviews.rating, reviews.summary, reviews.recommend, reviews.responce, reviews.body, reviews.date, reviews.reviewer_name, reviews.helpfulness, json_agg(json_build_object('id', reviews_photos.id, 'url',reviews_photos.url)) as photos from reviews left join reviews_photos on reviews.id = reviews_photos.review_id where product_id = $1 group by reviews.id ORDER BY $2 OFFSET $3 LIMIT $4",
       [product_id, orderBy, offset, count],
       (err, results) => {
         if (err) {
